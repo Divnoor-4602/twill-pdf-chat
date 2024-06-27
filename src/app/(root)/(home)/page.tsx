@@ -133,7 +133,7 @@ const Page = () => {
                 Start asking questions
               </span>
               <span className="mt-2 text-zinc-700">
-                It$apos;s that simple. Try Twill today, it takes less than a
+                It&apos;s that simple. Try Twill today, it takes less than a
                 minute!
               </span>
             </div>
