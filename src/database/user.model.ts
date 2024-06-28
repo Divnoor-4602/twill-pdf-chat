@@ -4,6 +4,7 @@ export interface IUser extends Document {
   kindeId: string;
   email: string;
   joinedAt: Date;
+  files: Schema.Types.ObjectId[];
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   stripePriceId?: string;
@@ -17,6 +18,7 @@ const userSchema = new Schema(
     email: { type: String, required: true },
     stripeCustomerId: { type: String },
     stripeSubscriptionId: { type: String },
+    files: [{ type: Schema.Types.ObjectId, ref: "File" }],
     stripePriceId: { type: String },
     stripeCurrentPeriodEnd: { type: Date },
     joinedAt: { type: Date, default: Date.now },
