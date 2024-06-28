@@ -19,6 +19,7 @@ export const appRouter = router({
 
       // check if the user is in the database
       const dbUser = await User.findOne({ kindeId: user.id });
+
       // if not, create a new user
       if (!dbUser) {
         const newUser = await User.create({
