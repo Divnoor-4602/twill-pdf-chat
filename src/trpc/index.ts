@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { databaseConnect } from "@/lib/mongoose";
 import User from "@/database/user.model";
 import File from "@/database/file.model";
+import { z } from "zod";
 
 export const appRouter = router({
   authCallback: publicProcedure.query(async () => {
@@ -12,7 +13,6 @@ export const appRouter = router({
     try {
       const { getUser } = getKindeServerSession();
       const user = await getUser();
-      console.log(user);
 
       if (!user?.id || !user?.email) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
@@ -35,6 +35,7 @@ export const appRouter = router({
       throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     }
   }),
+
   getUserFiles: privateProcedure.query(async ({ ctx }) => {
     try {
       await databaseConnect();
@@ -57,8 +58,38 @@ export const appRouter = router({
       throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
     }
   }),
-  // todo: create a route to delete user files :3:10
+
+  deleteFile: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await databaseConnect();
+        const { userId } = ctx;
+
+        const file = await File.findByIdAndDelete(input.id, { new: true });
+
+        if (!file) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Not found" });
+        }
+        // update the removed file from user's saved files
+
+        await User.updateOne(
+          {
+            kindeId: userId,
+          },
+          {
+            $pull: {
+              files: file._id,
+            },
+          }
+        );
+
+        return file;
+      } catch (error) {
+        console.log(error);
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+      }
+    }),
 });
-// Export type router type signature,
-// NOT the router itself.
+
 export type AppRouter = typeof appRouter;

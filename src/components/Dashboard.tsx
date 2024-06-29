@@ -1,6 +1,8 @@
 "use client";
 
-import { Ghost, Plus, MessageSquare, Trash } from "lucide-react";
+import { useState } from "react";
+import Link from "next/link";
+import { Ghost, Plus, MessageSquare, Trash, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import UploadButton from "./UploadButton";
 import { trpc } from "@/app/_trpc/client";
@@ -8,7 +10,32 @@ import Skeleton from "react-loading-skeleton";
 import { format } from "date-fns/format";
 
 const Dashboard = () => {
+  const [currentlyDeletedFile, setCurrentlyDeletedFile] = useState<
+    string | null
+  >(null);
+
+  const utils = trpc.useUtils();
+
   const { data: files, isLoading } = trpc.getUserFiles.useQuery();
+
+  /**
+   * Deletes a file and invalidates the user's files cache upon success.
+   * @remarks
+   * This function is used to delete a file and trigger a cache invalidation for the user's files.
+   * @param {string} fileId - The ID of the file to be deleted.
+   */
+  const { mutate: deleteFile } = trpc.deleteFile.useMutation({
+    onSuccess: () => {
+      utils.getUserFiles.invalidate();
+    },
+    onMutate({ id }) {
+      setCurrentlyDeletedFile(id);
+    },
+    onSettled() {
+      setCurrentlyDeletedFile(null);
+    },
+  });
+
   return (
     <>
       <main className="mx-auto md:p-10 max-w-7xl">
@@ -20,7 +47,7 @@ const Dashboard = () => {
       {/* display all the user files */}
       <div>
         {files && files.length > 0 ? (
-          <ul className="mt-8 grid grid-cols-1 gap-6 divide-y divide-zinc-200 md:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-8 grid grid-cols-1 gap-6 divide-y divide-zinc-200 md:grid-cols-2 lg:grid-cols-3 px-6">
             {files
               .sort(
                 (a, b) =>
@@ -34,11 +61,11 @@ const Dashboard = () => {
                       key={file.id}
                       className="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow transition hover:shadow-lg"
                     >
-                      <link
+                      <Link
                         href={`/dashboard/${file._id}`}
                         className="flex flex-col gap-2"
                       >
-                        <div className="pt-6 px-6 flex w-full justify-between space-x-6">
+                        <div className="pt-6 px-6 flex w-full justify-between space-x-6 items-center">
                           <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" />
                           <div className="flex-1 turnacate">
                             <div className="flex items-center space-x-3">
@@ -48,11 +75,13 @@ const Dashboard = () => {
                             </div>
                           </div>
                         </div>
-                      </link>
-                      <div className="mt-4 px-6 gird grid-cols-3 place-items-center py-2 gap-6 text-xs tezt-zinc-500">
-                        <div className="flex flex-col items-center gap-2">
+                      </Link>
+                      <div className="mt-4 px-4 grid grid-cols-3 place-items-center py-2 gap-6 text-xs tezt-zinc-500">
+                        <div className="flex items-center gap-2 ">
                           <Plus className="size-4" />
-                          {format(new Date(file.createdAt), "MMM dd, yyyy")}
+                          <span className="text-xs">
+                            {format(new Date(file.createdAt), "MMM dd, yyyy")}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <MessageSquare className="size-4" />
@@ -63,8 +92,17 @@ const Dashboard = () => {
                           variant="destructive"
                           className="w-full"
                           size="sm"
+                          onClick={() => {
+                            deleteFile({ id: file._id });
+                          }}
                         >
-                          <Trash className="size-4" />
+                          {currentlyDeletedFile === file.id ? (
+                            <>
+                              <Loader2 className="animate-spin size-4" />
+                            </>
+                          ) : (
+                            <Trash className="size-4" />
+                          )}
                         </Button>
                       </div>
                     </li>
